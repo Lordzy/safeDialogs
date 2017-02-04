@@ -342,4 +342,3 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 #define OnDialogResponse 		LSafeDialogs_OnDialogResp
 #define OnPlayerConnect 		LSafeDialogs_OnPlayerConnect
 #define OnScriptInit 			LSafeDialogs_OnScriptInit
-
