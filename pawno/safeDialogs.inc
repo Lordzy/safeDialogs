@@ -30,8 +30,8 @@ OnDialogSpoof(playerid, spooftype);
 playerid = The player who sent spoofed dialog response.
 spooftype = Spoof type.
 	DIALOG_SPOOFTYPE_DIALOG_ID - If sending fake dialog response.
-	DIALOG_SPOOFTYPE_DIALOG_LIST_ITEM - If sending fake list-item response.
-	DIALOG_SPOOFTYPE_DIALOG_INPUT_TEXT - If sending fake input text.
+	DIALOG_SPOOFTYPE_LIST_ITEM - If sending fake list-item response.
+	DIALOG_SPOOFTYPE_INPUT_TEXT - If sending fake input text.
 										(in case of lists)
 	
 Returns : Return 0 to prevent server receiving falsified data. Returning 1
