@@ -122,7 +122,13 @@ stock LSafeDialogs_ShowPlayerDialog(playerid, dialogid, style, caption[],
 	if(style == DIALOG_STYLE_LIST || style == DIALOG_STYLE_TABLIST ||
 		style == DIALOG_STYLE_TABLIST_HEADERS) {
 
-	    for(new i = strlen(info); i != 0; i--) {
+		new
+		    i = strlen(info);
+		    
+		if(info[i-1] == '\n') //Why a new empty line?
+		    info[i-1] = '\0';
+		    
+	    for(; i != 0; i--) {
 
 	        if(info[i-1] == '\n')
 	            g_LSafeDialogs_Player[playerid][e_L_SD_pDIALOG_LISTITEMS]++;
