@@ -3,7 +3,7 @@ ________________________________________________________________________________
 
 
 								safeDialogs.inc
-								    v1.0
+								    v1.0.1
 								By Lordzy
 
 LICENSE:
@@ -33,7 +33,7 @@ spooftype = Spoof type.
 	DIALOG_SPOOFTYPE_LIST_ITEM - If sending fake list-item response.
 	DIALOG_SPOOFTYPE_INPUT_TEXT - If sending fake input text.
 										(in case of lists)
-	
+
 Returns : Return 0 to prevent server receiving falsified data. Returning 1
 		  will allow receiving false data. In short, ALWAYS RETURN 0!
 
@@ -133,7 +133,7 @@ stock LSafeDialogs_ShowPlayerDialog(playerid, dialogid, style, caption[],
 	strpack((g_LSafeDialogs_player[playerid][e_L_SD_pDIALOG_STRING]{0} = '\0',
 	    g_LSafeDialogs_player[playerid][e_L_SD_pDIALOG_STRING]), info,
 	    MAX_DIALOG_STRING);
-	    
+
 	return ShowPlayerDialog(playerid, dialogid, style, caption,
 	                        info, button1, button2);
 
@@ -143,7 +143,7 @@ stock LSafeDialogs_ShowPlayerDialog(playerid, dialogid, style, caption[],
 //Other functions
 stock GetPlayerDialogID(playerid)
 	return g_LSafeDialogs_Player[playerid][e_L_SD_pDIALOG_ID];
-	
+
 stock GetPlayerDialogStyle(playerid)
 	return g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE];
 
@@ -221,16 +221,16 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 			tempDListString[MAX_DIALOG_LISTITEM_LEN],
 		    tempDStrLen
 		;
-		
+
 		strunpack(tempDString,
 			g_LSafeDialogs_player[playerid][e_L_SD_pDIALOG_STRING],
 		    sizeof(tempDString)
 		);
 		tempDStrLen = strlen(tempDString);
 		for(endPoint = 0; endPoint < tempDStrLen; endPoint++) {
-		
+
 		    if(tempDString[endPoint] == '\n') {
-		    
+
 		        if(++tempCounts == listitem)
 		            break;
                 initPoint = endPoint;
@@ -241,10 +241,14 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 		strmid(tempDListString, tempDString, initPoint, endPoint,
 		    sizeof(tempDListString));
 		    
+		tempDStrLen = strlen(tempDListString);
+
 		if(inputtextLen > 0 && tempDStrLen > 0) {
-		
-		    if(strcmp(inputtext, tempDListString, false)) {
-		    
+
+			tempDStrLen = (g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
+			    == DIALOG_STYLE_TABLIST_HEADERS) ? inputtextLen : cellmax;
+		    if(strcmp(inputtext, tempDListString, false, tempDStrLen)) {
+
 		        LSafeDialogs_ResetVars(playerid);
 		        #if defined OnDialogSpoof
 		        	if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT))
@@ -255,7 +259,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 			}
 		}
 		else {
-		
+
 		    LSafeDialogs_ResetVars(playerid);
 		    #if defined OnDialogSpoof
 		        if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT))
