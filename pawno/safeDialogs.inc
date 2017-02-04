@@ -41,14 +41,14 @@ Functions :
 
 GetPlayerDialogID(playerid) - Returns the current dialog ID of player.
 GetPlayerDialogStyle(playerid) - Returns the current dialog style of player.
-GetPlayerDialogInfo(playerid, dest[], sizeof(dest))
-	- Returns the info given to player from the dialog.
+GetPlayerDialogInfo(playerid, dest[], size = sizeof(dest))
+	- Stores the dialog info on "dest" array.
 
 
 //For syntax highlighting:
 native GetPlayerDialog(playerid);
 native GetPlayerDialogStyle(playerid);
-native GetPlayerDialogInfo(playerid, dest[], sizeof(dest));
+native GetPlayerDialogInfo(playerid, dest[], size = sizeof(dest));
 
 Please consider checking the release topic on SA-MP forums for further info or
 queries.
