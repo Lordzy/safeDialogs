@@ -240,13 +240,15 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 		    initPoint++;
 		strmid(tempDListString, tempDString, initPoint, endPoint,
 		    sizeof(tempDListString));
-		    
+
 		tempDStrLen = strlen(tempDListString);
 
 		if(inputtextLen > 0 && tempDStrLen > 0) {
 
 			tempDStrLen = (g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
-			    == DIALOG_STYLE_TABLIST_HEADERS) ? inputtextLen : cellmax;
+			    == DIALOG_STYLE_TABLIST_HEADERS ||
+				g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
+				== DIALOG_STYLE_TABLIST) ? inputtextLen : cellmax;
 		    if(strcmp(inputtext, tempDListString, false, tempDStrLen)) {
 
 		        LSafeDialogs_ResetVars(playerid);
