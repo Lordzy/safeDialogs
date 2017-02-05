@@ -299,8 +299,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 				g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
 				== DIALOG_STYLE_TABLIST) ? inputtextLen : cellmax;
 				
-			printf("inputtext : %s", inputtext);
-			printf("tempDListString : %s", tempDListString);
+			//printf("inputtext : %s", inputtext);
+			//printf("tempDListString : %s", tempDListString);
 			
 		    if(strcmp(inputtext, tempDListString, false, tempDStrLen)) {
 
