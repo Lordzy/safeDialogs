@@ -3,7 +3,7 @@ ________________________________________________________________________________
 
 
 								safeDialogs.inc
-								    v1.0.1
+								    v1.0.2
 								By Lordzy
 
 LICENSE:
@@ -61,8 +61,6 @@ ________________________________________________________________________________
 
 #define _included_safeDialogs
 
-#include <script_compatibility>
-
 //Configuration (optional)
 #if !defined MAX_DIALOG_STRING
 	#define MAX_DIALOG_STRING   2048
@@ -98,10 +96,11 @@ static
 
 	g_LSafeDialogs_Player[MAX_PLAYERS][e_L_SAFEDIALOGS_PLAYER],
 	g_LSafeDialogs_pDIALOG_STYLE[MAX_PLAYERS char],
-	g_LSafeDialogs_pDIALOG_STRING[MAX_PLAYERS][MAX_DIALOG_STRING char]
+	g_LSafeDialogs_pDIALOG_STRING[MAX_PLAYERS][MAX_DIALOG_STRING char],
+	bool:g_LSafeDialogs_Init = false
 ;
 
-//Internal function
+//Internal functions
 static stock LSafeDialogs_ResetVars(playerid) {
 
 	g_LSafeDialogs_Player[playerid][e_L_SD_pDIALOG_ID] = -1;
@@ -109,6 +108,17 @@ static stock LSafeDialogs_ResetVars(playerid) {
 	g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE] = 255;
 	g_LSafeDialogs_player[playerid][e_L_SD_pDIALOG_STRING]{0} = '\0';
 
+	return 1;
+}
+
+static stock LSafeDialogs_Init() {
+
+	for(new i = GetPlayerPoolSize(); i != -1; i--) {
+	    if(!IsPlayerConnected(i))
+	        continue;
+
+		OnPlayerConnect(i);
+	}
 	return 1;
 }
 
@@ -124,10 +134,10 @@ stock LSafeDialogs_ShowPlayerDialog(playerid, dialogid, style, caption[],
 
 		new
 		    i = strlen(info);
-		    
+
 		if(info[i-1] == '\n') //Why a new empty line?
 		    info[i-1] = '\0';
-		    
+
 	    for(; i != 0; i--) {
 
 	        if(info[i-1] == '\n')
@@ -162,16 +172,29 @@ stock GetPlayerDialogInfo(playerid, dest[], size = sizeof(dest)) {
 	return dest;
 }
 
-public OnScriptInit() {
+public OnFilterScriptInit() {
 
-	for(new i = GetPlayerPoolSize(); i != -1; i--) {
-	    if(!IsPlayerConnected(i))
-	        continue;
-
-		OnPlayerConnect(i);
+	if(!g_LSafeDialogs_Init) {
+	
+	    LSafeDialogs_Init();
+	    g_LSafeDialogs_Init = true;
 	}
-	#if defined LSafeDialogs_OnScriptInit
-	    return LSafeDialogs_OnScriptInit();
+	#if defined LSafeDialogs_OnFSInit
+	    return LSafeDialogs_OnFSInit();
+	#else
+	    return 1;
+	#endif
+}
+
+public OnGameModeInit() {
+
+	if(!g_LSafeDialogs_Init) {
+	
+		LSafeDialogs_Init();
+		g_LSafeDialogs_Init = true;
+	}
+	#if defined LSafeDialogs_OnGMInit
+	    return LSafeDialogs_OnGMInit();
 	#else
 	    return 1;
 	#endif
@@ -249,12 +272,36 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 
 		tempDStrLen = strlen(tempDListString);
 
+		initPoint = 0;
+		//Filtering the list string to avoid false calls.
+		for(endPoint = 0; endPoint< tempDStrLen; endPoint++) {
+		
+		    if(tempDListString[endPoint] == '{') {
+		    
+				initPoint = endPoint;
+				endPoint += 7;
+				if(endPoint < tempDStrLen) {
+				
+				    if(tempDListString[endPoint] == '}') {
+				    
+						strdel(tempDListString, initPoint, ++endPoint);
+						tempDStrLen = strlen(tempDListString);
+						endPoint = initPoint = 0;
+					}
+				}
+			}
+		}
+				
 		if(inputtextLen > 0 && tempDStrLen > 0) {
 
 			tempDStrLen = (g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
 			    == DIALOG_STYLE_TABLIST_HEADERS ||
 				g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
 				== DIALOG_STYLE_TABLIST) ? inputtextLen : cellmax;
+				
+			printf("inputtext : %s", inputtext);
+			printf("tempDListString : %s", tempDListString);
+			
 		    if(strcmp(inputtext, tempDListString, false, tempDStrLen)) {
 
 		        LSafeDialogs_ResetVars(playerid);
@@ -296,25 +343,22 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 }
 
 //Hooks
-#if defined _ALS_OnScriptInit
-	#undef OnScriptInit
+#if defined _ALS_OnFilterScriptInit
+	#undef OnFilterScriptInit
 #else
-	#define _ALS_OnScriptInit
+	#define _ALS_OnFilterScriptInit
 #endif
 
-#if defined LSafeDialogs_OnScriptInit
-	forward LSafeDialogs_OnScriptInit();
+#if defined _ALS_OnGameModeInit
+	#undef OnGameModeInit
+#else
+	#define _ALS_OnGameModeInit
 #endif
-
 
 #if defined _ALS_OnPlayerConnect
 	#undef OnPlayerConnect
 #else
 	#define _ALS_OnPlayerConnect
-#endif
-
-#if defined LSafeDialogs_OnPlayerConnect
-	forward LSafeDialogs_OnPlayerConnect(playerid);
 #endif
 
 #if defined _ALS_OnDialogResponse
@@ -323,22 +367,35 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 	#define _ALS_OnDialogResponse
 #endif
 
-#if defined LSafeDialogs_OnDialogResp
-	forward LSafeDialogs_OnDialogResp(playerid, dialogid, response, listitem,
-	    inputtext[]);
-#endif
-
 #if defined _ALS_ShowPlayerDialog
 	#undef ShowPlayerDialog
 #else
 	#define _ALS_ShowPlayerDialog
 #endif
 
-#if defined OnDialogSpoof
-	forward OnDialogSpoof(playerid, spooftype);
-#endif
-
 #define ShowPlayerDialog 		LSafeDialogs_ShowPlayerDialog
 #define OnDialogResponse 		LSafeDialogs_OnDialogResp
 #define OnPlayerConnect 		LSafeDialogs_OnPlayerConnect
-#define OnScriptInit 			LSafeDialogs_OnScriptInit
+#define OnFilterScriptInit      LSafeDialogs_OnFSInit
+#define OnGameModeInit          LSafeDialogs_OnGMInit
+
+#if defined LSafeDialogs_OnFSInit
+	forward LSafeDialogs_OnFSInit();
+#endif
+
+#if defined LSafeDialogs_OnGMInit
+	forward LSafeDialogs_OnGMInit();
+#endif
+
+#if defined LSafeDialogs_OnPlayerConnect
+	forward LSafeDialogs_OnPlayerConnect(playerid);
+#endif
+
+#if defined LSafeDialogs_OnDialogResp
+	forward LSafeDialogs_OnDialogResp(playerid, dialogid, response, listitem,
+	    inputtext[]);
+#endif
+
+#if defined OnDialogSpoof
+	forward OnDialogSpoof(playerid, spooftype);
+#endif
