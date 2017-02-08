@@ -3,7 +3,7 @@ ________________________________________________________________________________
 
 
 								safeDialogs.inc
-								    v1.0.2
+								    v1.0.3
 								By Lordzy
 
 LICENSE:
@@ -37,21 +37,29 @@ spooftype = Spoof type.
 Returns : Return 0 to prevent server receiving falsified data. Returning 1
 		  will allow receiving false data. In short, ALWAYS RETURN 0!
 
-Functions :
+Functions : (These can be used only under OnDialogResponse & OnDialogSpoof)
 
 GetPlayerDialogID(playerid) - Returns the current dialog ID of player.
 GetPlayerDialogStyle(playerid) - Returns the current dialog style of player.
 GetPlayerDialogInfo(playerid, dest[], size = sizeof(dest))
 	- Stores the dialog info on "dest" array.
-
-
+GetPlayerDialogItem(playerid, listitem, dest[], bool:filter = false, size = sizeof(dest))
+	- Stores the string/data of corresponding listitem.
+	- If filter is set to true, listitem text will be filtered
+	  (ie : Color embedding will be removed. Text will be displayed like how-
+	        clients see in game.)
+   - If filter is set to false (default), listitem text will be as per the
+   	 script.
+   
+	
 //For syntax highlighting:
 native GetPlayerDialog(playerid);
 native GetPlayerDialogStyle(playerid);
 native GetPlayerDialogInfo(playerid, dest[], size = sizeof(dest));
+native GetPlayerDialogItem(playerid, listitem, dest[], bool:filter = false, size = sizeof(dest));
 
-Please consider checking the release topic on SA-MP forums for further info or
-queries.
+Please consider checking the release topic on SA-MP forums for further info,
+change-logs or queries.
 
 ________________________________________________________________________________    */
 
@@ -97,7 +105,8 @@ static
 	g_LSafeDialogs_Player[MAX_PLAYERS][e_L_SAFEDIALOGS_PLAYER],
 	g_LSafeDialogs_pDIALOG_STYLE[MAX_PLAYERS char],
 	g_LSafeDialogs_pDIALOG_STRING[MAX_PLAYERS][MAX_DIALOG_STRING char],
-	bool:g_LSafeDialogs_Init = false
+	bool:g_LSafeDialogs_Init = false,
+	g_LSafeDialogs_bigString[MAX_DIALOG_STRING] //To use less heap space.
 ;
 
 //Internal functions
@@ -165,17 +174,83 @@ stock GetPlayerDialogStyle(playerid)
 
 stock GetPlayerDialogInfo(playerid, dest[], size = sizeof(dest)) {
 
-	strunpack(dest,
+	strunpack((dest[0] = '\0', dest),
 	    g_LSafeDialogs_player[playerid][e_L_SD_pDIALOG_STRING],
 	    size);
 
 	return dest;
 }
 
+stock GetPlayerDialogItem(playerid, listitem, dest[], bool:filter = false,
+							size = sizeof(dest)) {
+
+    new
+        initPoint,
+        endPoint,
+        tempCounts,
+        dLen
+    ;
+
+    tempCounts = (GetPlayerDialogStyle(playerid) == DIALOG_STYLE_TABLIST_HEADERS) ? -2 : -1;
+
+	GetPlayerDialogInfo(playerid, g_LSafeDialogs_bigString,
+		sizeof(g_LSafeDialogs_bigString));
+		
+    dLen = strlen(g_LSafeDialogs_bigString);
+
+    for(endPoint = 0; endPoint < dLen; endPoint++) {
+
+        if(g_LSafeDialogs_bigString[endPoint] == '\n') {
+
+            if(++tempCounts == listitem)
+                break;
+            initPoint = endPoint;
+        }
+    }
+    if(initPoint != 0)
+        initPoint++;
+
+    strmid(dest, g_LSafeDialogs_bigString, initPoint, endPoint, size);
+
+	if(filter) {
+
+		dLen = strlen(dest);
+		for(endPoint = 0; endPoint < dLen; endPoint++) {
+
+		    if(dest[endPoint] == '{') {
+
+		        initPoint = endPoint;
+		        endPoint += 7;
+		        if(endPoint < dLen) {
+
+		            if(dest[endPoint] == '}') {
+
+		                for(tempCounts = 1; tempCounts < 7; tempCounts++) {
+
+		                    if(!(tolower(dest[initPoint+tempCounts]) >= 97
+		                    && tolower(dest[initPoint+tempCounts]) <= 102)
+		                    && !(dest[initPoint+tempCounts] >= 48
+		                    && dest[initPoint+tempCounts] <= 57))
+		                        break;
+						}
+						if(tempCounts != 7)
+						    continue;
+
+						strdel(dest, initPoint, ++endPoint);
+						dLen = strlen(dest);
+						endPoint -= 8;
+					}
+				}
+			}
+		}
+	}
+    return 1;
+}
+
 public OnFilterScriptInit() {
 
 	if(!g_LSafeDialogs_Init) {
-	
+
 	    LSafeDialogs_Init();
 	    g_LSafeDialogs_Init = true;
 	}
@@ -189,7 +264,7 @@ public OnFilterScriptInit() {
 public OnGameModeInit() {
 
 	if(!g_LSafeDialogs_Init) {
-	
+
 		LSafeDialogs_Init();
 		g_LSafeDialogs_Init = true;
 	}
@@ -217,15 +292,17 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 
 	if(g_LSafeDialogs_Player[playerid][e_L_SD_pDIALOG_ID] != dialogid) {
 
-	    LSafeDialogs_ResetVars(playerid);
 	    #if defined OnDialogSpoof
-			if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_DIALOG_ID))
+			if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_DIALOG_ID)) {
+			    LSafeDialogs_ResetVars(playerid);
 			    return 1;
+			}
 		#else
+		    LSafeDialogs_ResetVars(playerid);
   			return 1;
 		#endif
 	}
-	new
+ 	new
 	    inputtextLen = strlen(inputtext);
 
 	if(g_LSafeDialogs_Player[playerid][e_L_SD_pDIALOG_LISTITEMS] != -1) {
@@ -233,11 +310,14 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 	    if(listitem < 0 ||
    		listitem > g_LSafeDialogs_Player[playerid][e_L_SD_pDIALOG_LISTITEMS]) {
 
-			LSafeDialogs_ResetVars(playerid);
 			#if defined OnDialogSpoof
-			    if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_LIST_ITEM))
+			    if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_LIST_ITEM)) {
+			    
+			        LSafeDialogs_ResetVars(playerid);
 			        return 1;
+				}
 			#else
+			    LSafeDialogs_ResetVars(playerid);
 				return 1;
 			#endif
 		}
@@ -246,19 +326,18 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 		    endPoint,
 		    tempCounts = (g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
 				== DIALOG_STYLE_TABLIST_HEADERS) ? -2 : -1,
-			tempDString[MAX_DIALOG_STRING],
 			tempDListString[MAX_DIALOG_LISTITEM_LEN],
 		    tempDStrLen
 		;
 
-		strunpack(tempDString,
+		strunpack((g_LSafeDialogs_bigString[0]='\0', g_LSafeDialogs_bigString),
 			g_LSafeDialogs_player[playerid][e_L_SD_pDIALOG_STRING],
-		    sizeof(tempDString)
+		    sizeof(g_LSafeDialogs_bigString)
 		);
-		tempDStrLen = strlen(tempDString);
+		tempDStrLen = strlen(g_LSafeDialogs_bigString);
 		for(endPoint = 0; endPoint < tempDStrLen; endPoint++) {
 
-		    if(tempDString[endPoint] == '\n') {
+		    if(g_LSafeDialogs_bigString[endPoint] == '\n') {
 
 		        if(++tempCounts == listitem)
 		            break;
@@ -267,7 +346,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 		}
 		if(initPoint != 0)
 		    initPoint++;
-		strmid(tempDListString, tempDString, initPoint, endPoint,
+		strmid(tempDListString, g_LSafeDialogs_bigString, initPoint, endPoint,
 		    sizeof(tempDListString));
 
 		tempDStrLen = strlen(tempDListString);
@@ -275,23 +354,36 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 		initPoint = 0;
 		//Filtering the list string to avoid false calls.
 		for(endPoint = 0; endPoint< tempDStrLen; endPoint++) {
-		
+
 		    if(tempDListString[endPoint] == '{') {
-		    
+
 				initPoint = endPoint;
 				endPoint += 7;
 				if(endPoint < tempDStrLen) {
-				
+
 				    if(tempDListString[endPoint] == '}') {
-				    
+
+						for(tempCounts = 1; tempCounts < 7; tempCounts++) {
+						
+						    if(!(tolower(tempDListString[initPoint+tempCounts])\
+							>= 97
+						    && tolower(tempDListString[initPoint+tempCounts])\
+							 <= 102)
+							&& !(tempDListString[initPoint+tempCounts] >= 48
+							&& tempDListString[initPoint+tempCounts] <= 57))
+							    break;
+						}
+						if(tempCounts != 7)
+						    continue;
+						    
 						strdel(tempDListString, initPoint, ++endPoint);
 						tempDStrLen = strlen(tempDListString);
-						endPoint = initPoint = 0;
+						endPoint -= 8;
 					}
 				}
 			}
 		}
-				
+
 		if(inputtextLen > 0 && tempDStrLen > 0) {
 
 			tempDStrLen = (g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
@@ -299,27 +391,30 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 				g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
 				== DIALOG_STYLE_TABLIST) ? inputtextLen : cellmax;
 				
-			//printf("inputtext : %s", inputtext);
-			//printf("tempDListString : %s", tempDListString);
-			
 		    if(strcmp(inputtext, tempDListString, false, tempDStrLen)) {
 
-		        LSafeDialogs_ResetVars(playerid);
 		        #if defined OnDialogSpoof
-		        	if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT))
+		        	if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT)) {
+
+						LSafeDialogs_ResetVars(playerid);
 		            	return 1;
+					}
 				#else
+				    LSafeDialogs_ResetVars(playerid);
 				    return 1;
 				#endif
 			}
 		}
 		else {
 
-		    LSafeDialogs_ResetVars(playerid);
 		    #if defined OnDialogSpoof
-		        if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT))
+		        if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT)) {
+		        
+		            LSafeDialogs_ResetVars(playerid);
 		            return 1;
+				}
 			#else
+			    LSafeDialogs_ResetVars(playerid);
 			    return 1;
 			#endif
 		}
@@ -333,12 +428,15 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 	            inputtext[i] = '#';
 		}
 	}
-	LSafeDialogs_ResetVars(playerid);
 	#if defined LSafeDialogs_OnDialogResp
-	    return LSafeDialogs_OnDialogResp(playerid, dialogid, response,
+	    //inputtextLen is used as return value of further OnDialogResponse.
+	    inputtextLen = LSafeDialogs_OnDialogResp(playerid, dialogid, response,
 	        listitem, inputtext);
+		LSafeDialogs_ResetVars(playerid); //Resetting only at last.
+		return inputtextLen;
 	#else
-	    return 1;
+	    LSafeDialogs_ResetVars(playerid);
+	    return 0;
 	#endif
 }
 
@@ -399,3 +497,4 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 #if defined OnDialogSpoof
 	forward OnDialogSpoof(playerid, spooftype);
 #endif
+
