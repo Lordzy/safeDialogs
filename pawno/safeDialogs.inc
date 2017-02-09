@@ -50,8 +50,8 @@ GetPlayerDialogItem(playerid, listitem, dest[], bool:filter = false, size = size
 	        clients see in game.)
    - If filter is set to false (default), listitem text will be as per the
    	 script.
-   
-	
+
+
 //For syntax highlighting:
 native GetPlayerDialog(playerid);
 native GetPlayerDialogStyle(playerid);
@@ -126,7 +126,7 @@ static stock LSafeDialogs_Init() {
 	    if(!IsPlayerConnected(i))
 	        continue;
 
-		OnPlayerConnect(i);
+		LSafeDialogs_ResetVars(i);
 	}
 	return 1;
 }
@@ -195,7 +195,7 @@ stock GetPlayerDialogItem(playerid, listitem, dest[], bool:filter = false,
 
 	GetPlayerDialogInfo(playerid, g_LSafeDialogs_bigString,
 		sizeof(g_LSafeDialogs_bigString));
-		
+
     dLen = strlen(g_LSafeDialogs_bigString);
 
     for(endPoint = 0; endPoint < dLen; endPoint++) {
@@ -312,7 +312,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 
 			#if defined OnDialogSpoof
 			    if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_LIST_ITEM)) {
-			    
+
 			        LSafeDialogs_ResetVars(playerid);
 			        return 1;
 				}
@@ -364,7 +364,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 				    if(tempDListString[endPoint] == '}') {
 
 						for(tempCounts = 1; tempCounts < 7; tempCounts++) {
-						
+
 						    if(!(tolower(tempDListString[initPoint+tempCounts])\
 							>= 97
 						    && tolower(tempDListString[initPoint+tempCounts])\
@@ -375,7 +375,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 						}
 						if(tempCounts != 7)
 						    continue;
-						    
+
 						strdel(tempDListString, initPoint, ++endPoint);
 						tempDStrLen = strlen(tempDListString);
 						endPoint -= 8;
@@ -390,7 +390,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 			    == DIALOG_STYLE_TABLIST_HEADERS ||
 				g_LSafeDialogs_Player{playerid}[e_L_SD_pDIALOG_STYLE]
 				== DIALOG_STYLE_TABLIST) ? inputtextLen : cellmax;
-				
+
 		    if(strcmp(inputtext, tempDListString, false, tempDStrLen)) {
 
 		        #if defined OnDialogSpoof
@@ -409,7 +409,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
 
 		    #if defined OnDialogSpoof
 		        if(!OnDialogSpoof(playerid, DIALOG_SPOOFTYPE_INPUT_TEXT)) {
-		        
+
 		            LSafeDialogs_ResetVars(playerid);
 		            return 1;
 				}
